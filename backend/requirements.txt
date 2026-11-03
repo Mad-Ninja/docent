@@ -1,0 +1,8 @@
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+psycopg[binary]==3.2.3
+pgvector==0.3.6
+fastembed==0.4.2
+pydantic-settings==2.6.1
+pytest==8.3.4
+httpx==0.28.1
