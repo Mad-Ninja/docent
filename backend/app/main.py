@@ -2,7 +2,7 @@ from fastapi import FastAPI, Query
 
 from .search import as_dicts, vector_search
 
-app = FastAPI(title="kb-agent", description="Support agent over a documentation knowledge base")
+app = FastAPI(title="Docent", description="AI support agent over documentation: RAG, tools, evals")
 
 
 @app.get("/health")

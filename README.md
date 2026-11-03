@@ -1,6 +1,6 @@
-# kb-agent
+# Docent
 
-A support agent over a documentation knowledge base: it answers questions with citations, decides which tools to call, and every change is measured by an evaluation suite.
+**AI support agent over documentation — RAG, tools, evals.** It answers questions with citations, decides which tools to call, and every change is measured by an evaluation suite.
 
 The knowledge base is the [FastAPI documentation](https://github.com/fastapi/fastapi/tree/master/docs/en/docs) (MIT, see `corpus/fastapi/LICENSE`).
 
