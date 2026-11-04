@@ -45,6 +45,19 @@ export function Chat() {
 function Bubble({ message, showScores }: { message: Message; showScores: boolean }) {
   return (
     <div className={`bubble ${message.role}`}>
+      {message.steps.length > 0 && (
+        <details className="trace" open={message.status === 'streaming'}>
+          <summary>{message.steps.length} agent step{message.steps.length > 1 ? 's' : ''}</summary>
+          <ol>
+            {message.steps.map((s) => (
+              <li key={s.n} className={s.error ? 'error' : undefined}>
+                <code>{s.tool}</code> {JSON.stringify(s.input)} → {s.result} <span className="score">{s.ms} ms</span>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+      {message.ticket && <div className="note">Ticket #{message.ticket} opened for the support team.</div>}
       <div className="text">{message.text || (message.status === 'streaming' ? '…' : '')}</div>
       {message.backend && message.status !== 'streaming' && <div className="note">answered by: {message.backend}</div>}
       {message.status === 'stopped' && <div className="note">Stopped.</div>}

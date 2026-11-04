@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react'
-import { readEvents, type Source } from './api'
+import { readEvents, type AgentStep, type Source } from './api'
 
 export interface Message {
   id: number
   role: 'user' | 'assistant'
   text: string
   sources: Source[]
+  /** Tool calls the agent made before answering. */
+  steps: AgentStep[]
+  /** Set when the agent passed the question to a person. */
+  ticket?: number
   /** Which generator answered: anthropic, claude-code or extractive. */
   backend?: string
   status: 'streaming' | 'done' | 'stopped' | 'error'
@@ -15,14 +19,20 @@ type Action =
   | { type: 'ask'; id: number; question: string }
   | { type: 'sources'; id: number; sources: Source[]; backend: string }
   | { type: 'token'; id: number; text: string }
+  | { type: 'step'; id: number; step: AgentStep }
+  | { type: 'handoff'; id: number; ticket: number }
   | { type: 'finish'; id: number; status: Message['status'] }
 
 function reducer(messages: Message[], action: Action): Message[] {
   switch (action.type) {
     case 'ask':
       return [...messages,
-        { id: action.id - 1, role: 'user', text: action.question, sources: [], status: 'done' },
-        { id: action.id, role: 'assistant', text: '', sources: [], status: 'streaming' }]
+        { id: action.id - 1, role: 'user', text: action.question, sources: [], steps: [], status: 'done' },
+        { id: action.id, role: 'assistant', text: '', sources: [], steps: [], status: 'streaming' }]
+    case 'step':
+      return messages.map((m) => (m.id === action.id ? { ...m, steps: [...m.steps, action.step] } : m))
+    case 'handoff':
+      return messages.map((m) => (m.id === action.id ? { ...m, ticket: action.ticket } : m))
     case 'sources':
       return messages.map((m) => (m.id === action.id ? { ...m, sources: action.sources, backend: action.backend } : m))
     case 'token':
@@ -62,6 +72,11 @@ export function useChatStream(k: number) {
       for await (const event of readEvents(res.body)) {
         if (event.type === 'sources') dispatch({ type: 'sources', id, sources: event.items, backend: event.backend })
         else if (event.type === 'token') dispatch({ type: 'token', id, text: event.text })
+        else if (event.type === 'step') {
+          const { type: _, ...step } = event
+          dispatch({ type: 'step', id, step })
+        }
+        else if (event.type === 'handoff') dispatch({ type: 'handoff', id, ticket: event.ticket })
         else if (event.type === 'error') status = 'error'  // generation failed after the stream had started
       }
       dispatch({ type: 'finish', id, status })

@@ -26,6 +26,27 @@ CREATE TABLE IF NOT EXISTS chunks (
 
 CREATE INDEX IF NOT EXISTS chunks_embedding_idx ON chunks USING hnsw (embedding vector_cosine_ops);
 CREATE INDEX IF NOT EXISTS chunks_tsv_idx ON chunks USING gin (tsv);
+
+-- one row per answered question: what the agent did, for debugging and evals
+CREATE TABLE IF NOT EXISTS traces (
+    id         serial PRIMARY KEY,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    question   text NOT NULL,
+    planner    text NOT NULL,
+    outcome    text NOT NULL,
+    steps      jsonb NOT NULL,
+    sources    jsonb NOT NULL,
+    total_ms   int NOT NULL
+);
+
+-- questions the agent passed to a person
+CREATE TABLE IF NOT EXISTS tickets (
+    id         serial PRIMARY KEY,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    question   text NOT NULL,
+    reason     text NOT NULL,
+    status     text NOT NULL DEFAULT 'open'
+);
 """
 
 

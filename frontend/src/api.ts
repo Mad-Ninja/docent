@@ -13,8 +13,20 @@ export interface Source {
   score: number
 }
 
+/** One tool call made by the agent, as traced by the backend. */
+export interface AgentStep {
+  n: number
+  tool: string
+  input: Record<string, unknown>
+  result: string
+  error: boolean
+  ms: number
+}
+
 /** Events of the /chat Server-Sent Events stream. */
 export type ChatEvent =
+  | { type: 'step' } & AgentStep
+  | { type: 'handoff'; ticket: number; reason: string }
   | { type: 'sources'; items: Source[]; backend: string }
   | { type: 'token'; text: string }
   | { type: 'done' }
