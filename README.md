@@ -17,7 +17,7 @@ The knowledge base is the [FastAPI documentation](https://github.com/fastapi/fas
 | Hybrid search (pgvector + full-text, RRF) | ⏳ |
 | Answers with citations (Claude), refusal when the docs don't cover it | ✅ |
 | Agent with tools: search, read page, hand-off to a human; step budget, error recovery, traces | ✅ |
-| Evaluation: retrieval metrics, LLM-as-judge, agent metrics | ⏳ |
+| Evaluation: golden set + retrieval metrics (hit@k, MRR) ✅; LLM-as-judge, agent metrics ⏳ | 🟡 |
 
 ## Run
 
@@ -44,3 +44,20 @@ cd ../frontend && npm install && npm run dev   # http://localhost:5173, /api is 
 - **Agent loop is hand-written** (`backend/app/agent.py`), not a framework: a hard step budget, tool errors returned to the model as observations (unknown tool, bad input, a crashing tool), and a trace of every step stored in `traces` for evals. Hand-offs open a row in `tickets`.
 - **The agent only gathers evidence; the cited answer is a separate step.** This lets the evaluation measure the tool decisions and the answer quality separately, and `mode: "rag"` (one search, no agent) stays as the baseline.
 - **Planners behind one interface:** native tool use via the Anthropic SDK; a JSON-reply protocol for a model without a tools API (the local `claude -p`); and a no-model "search once" planner. The loop is unit-tested with a scripted planner — no database or LLM needed.
+
+## Evaluation
+
+Golden set: `evals/golden.jsonl` — 30 questions phrased the way users ask (not the page titles), each with the page(s) that answer it, plus 5 out-of-scope questions the agent should hand off. Run `python -m app.evals` in `backend/`.
+
+**Retrieval, vector search, k = 6** (first run, 2026-11-04):
+
+| Variant | hit@6 | hit@1 | MRR | distinct pages in top 6 |
+|---|---|---|---|---|
+| Vector search | 0.933 | 0.667 | 0.754 | 3.3 |
+| + max 2 chunks per page | 0.933 | 0.667 | 0.754 | 4.3 |
+| + release notes excluded | 0.933 | 0.667 | 0.771 | 3.2 |
+
+What the misses show:
+- *"My React app on localhost:3000 gets blocked…"* never says "CORS", and pure vector search does not find the CORS page. The agent rewrites the query to "CORS…" and finds it — the case the agent exists for (the agent eval will measure it).
+- The release notes mention every feature and crowd real pages out of the results.
+- Next: hybrid search (vector + full-text, RRF) and the agent eval — tool choice, hand-off accuracy, steps, latency — against the plain-RAG baseline.

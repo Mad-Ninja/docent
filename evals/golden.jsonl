@@ -1,0 +1,35 @@
+{"id": "cors", "question": "My React app on localhost:3000 gets blocked when calling the API on port 8000. How do I fix it?", "expected": ["tutorial/cors.md"]}
+{"id": "bg-tasks", "question": "How can I send an email after returning the response, without making the client wait?", "expected": ["tutorial/background-tasks.md"]}
+{"id": "upload", "question": "How do I accept a file upload from a form?", "expected": ["tutorial/request-files.md", "tutorial/request-forms-and-files.md"]}
+{"id": "jwt", "question": "How do I issue and verify JWT tokens for login?", "expected": ["tutorial/security/oauth2-jwt.md"]}
+{"id": "current-user", "question": "How do I get the currently logged-in user inside an endpoint?", "expected": ["tutorial/security/get-current-user.md"]}
+{"id": "scopes", "question": "How can I restrict some endpoints to tokens with admin permissions?", "expected": ["advanced/security/oauth2-scopes.md"]}
+{"id": "basic-auth", "question": "Protect an endpoint with a username and password prompt in the browser", "expected": ["advanced/security/http-basic-auth.md"]}
+{"id": "status-code", "question": "How do I return 201 Created instead of 200?", "expected": ["tutorial/response-status-code.md"]}
+{"id": "404", "question": "How do I return a 404 error when an item is not found?", "expected": ["tutorial/handling-errors.md"]}
+{"id": "validation-handler", "question": "Can I customize the JSON returned when request validation fails?", "expected": ["tutorial/handling-errors.md"]}
+{"id": "query-validation", "question": "Limit a query string parameter to at most 50 characters", "expected": ["tutorial/query-params-str-validations.md"]}
+{"id": "path-numeric", "question": "Make sure an item id in the URL is greater than zero", "expected": ["tutorial/path-params-numeric-validations.md"]}
+{"id": "optional-query", "question": "How do I make a query parameter optional with a default value?", "expected": ["tutorial/query-params.md"]}
+{"id": "response-model", "question": "How do I hide the password field from the API response?", "expected": ["tutorial/response-model.md", "tutorial/extra-models.md"]}
+{"id": "nested", "question": "How do I accept a JSON body with a list of nested objects?", "expected": ["tutorial/body-nested-models.md"]}
+{"id": "partial-update", "question": "How do I do a partial update with PATCH so missing fields are not overwritten?", "expected": ["tutorial/body-updates.md"]}
+{"id": "deps-yield", "question": "Open a database session per request and close it afterwards", "expected": ["tutorial/dependencies/dependencies-with-yield.md", "tutorial/sql-databases.md"]}
+{"id": "global-deps", "question": "Apply an API key check to every route in the application", "expected": ["tutorial/dependencies/global-dependencies.md"]}
+{"id": "bigger-apps", "question": "How do I split my routes across several files?", "expected": ["tutorial/bigger-applications.md"]}
+{"id": "testing", "question": "How do I write tests for my endpoints?", "expected": ["tutorial/testing.md"]}
+{"id": "override-deps", "question": "In tests, how do I replace a dependency with a fake one?", "expected": ["advanced/testing-dependencies.md"]}
+{"id": "websocket", "question": "Does FastAPI support WebSockets for a chat?", "expected": ["advanced/websockets.md"]}
+{"id": "sse", "question": "How do I stream events to the browser with Server-Sent Events?", "expected": ["tutorial/server-sent-events.md"]}
+{"id": "startup", "question": "Load a machine learning model once when the app starts and release it on shutdown", "expected": ["advanced/events.md"]}
+{"id": "settings", "question": "Where should I keep configuration like database URLs and secrets?", "expected": ["advanced/settings.md", "environment-variables.md"]}
+{"id": "docker", "question": "How do I build a Docker image for my FastAPI app?", "expected": ["deployment/docker.md"]}
+{"id": "workers", "question": "How do I run several worker processes in production?", "expected": ["deployment/server-workers.md"]}
+{"id": "proxy", "question": "My app runs behind Nginx under the /api prefix and the docs page breaks", "expected": ["advanced/behind-a-proxy.md"]}
+{"id": "static", "question": "Serve images and CSS files from a folder", "expected": ["tutorial/static-files.md"]}
+{"id": "async", "question": "Should I declare my endpoint with async def or plain def?", "expected": ["async.md"]}
+{"id": "oos-refund", "question": "I was charged twice for my subscription, please refund me", "expected": [], "handoff": true}
+{"id": "oos-django", "question": "How do I write a Django admin custom action?", "expected": [], "handoff": true}
+{"id": "oos-person", "question": "I want to talk to a real person, not a bot", "expected": [], "handoff": true}
+{"id": "oos-account", "question": "Please delete my account and all my data", "expected": [], "handoff": true}
+{"id": "oos-weather", "question": "What will the weather be in Minsk tomorrow?", "expected": [], "handoff": true}
