@@ -6,17 +6,18 @@ Built with Claude Code as a coding agent: I design the architecture, review ever
 
 The knowledge base is the [FastAPI documentation](https://github.com/fastapi/fastapi/tree/master/docs/en/docs) (MIT, see `corpus/fastapi/LICENSE`).
 
-**Status:** day 1 of 7 — ingestion and vector search.
+**Status:** day 2 of 7 — ingestion, vector search, streaming chat API and React UI.
 
 | Part | Status |
 |---|---|
 | Ingestion: markdown → chunks with heading paths → embeddings → Postgres + pgvector | ✅ |
 | Vector search `/search` | ✅ |
+| Streaming chat API `/chat` (Server-Sent Events; extractive answers until the LLM step) | ✅ |
+| React UI: streaming chat with sources, retrieval panel | ✅ |
 | Hybrid search (pgvector + full-text, RRF) | ⏳ |
 | Answers with citations (Claude) | ⏳ |
 | Agent with tools | ⏳ |
 | Evaluation: retrieval metrics, LLM-as-judge, agent metrics | ⏳ |
-| React UI | ⏳ |
 
 ## Run
 
@@ -27,6 +28,8 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python -m app.ingest            # ~6 min on CPU: 156 pages → ~2400 chunks
 .venv/bin/uvicorn app.main:app --reload   # http://127.0.0.1:8000/docs
 .venv/bin/python -m pytest tests
+
+cd ../frontend && npm install && npm run dev   # http://localhost:5173, /api is proxied to :8000
 ```
 
 ## Decisions
@@ -34,3 +37,5 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 - **Chunks keep their heading path** ("Security › OAuth2 › Scopes"): it is embedded together with the text and shown as the citation.
 - **Embeddings:** `BAAI/bge-small-en-v1.5` via fastembed (ONNX, CPU, 384 dims) — free, local, good enough for an English corpus; queries get the BGE search instruction, passages don't.
 - **Index:** HNSW on cosine distance + a generated `tsvector` column ready for the full-text half of hybrid search.
+- **Streaming:** `/chat` sends Server-Sent Events (`sources` → `token`… → `done`). The UI reads them with a custom `useChatStream` hook (`fetch` + `ReadableStream`, cancellation through `AbortController`), so swapping the extractive answer for an LLM later does not touch the UI.
+- **UI state:** chat history in `useReducer`, server state (retrieval panel) in TanStack Query with deferred input, shared settings in a memoised Context.
