@@ -46,6 +46,7 @@ function Bubble({ message, showScores }: { message: Message; showScores: boolean
   return (
     <div className={`bubble ${message.role}`}>
       <div className="text">{message.text || (message.status === 'streaming' ? '…' : '')}</div>
+      {message.backend && message.status !== 'streaming' && <div className="note">answered by: {message.backend}</div>}
       {message.status === 'stopped' && <div className="note">Stopped.</div>}
       {message.status === 'error' && <div className="note error">Something went wrong. Try again.</div>}
       {message.sources.length > 0 && (

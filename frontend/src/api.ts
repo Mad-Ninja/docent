@@ -15,9 +15,10 @@ export interface Source {
 
 /** Events of the /chat Server-Sent Events stream. */
 export type ChatEvent =
-  | { type: 'sources'; items: Source[] }
+  | { type: 'sources'; items: Source[]; backend: string }
   | { type: 'token'; text: string }
   | { type: 'done' }
+  | { type: 'error'; message: string }
 
 export async function searchDocs(q: string, k: number, signal?: AbortSignal): Promise<SearchHit[]> {
   const res = await fetch(`/api/search?${new URLSearchParams({ q, k: String(k) })}`, { signal })

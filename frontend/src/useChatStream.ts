@@ -6,12 +6,14 @@ export interface Message {
   role: 'user' | 'assistant'
   text: string
   sources: Source[]
+  /** Which generator answered: anthropic, claude-code or extractive. */
+  backend?: string
   status: 'streaming' | 'done' | 'stopped' | 'error'
 }
 
 type Action =
   | { type: 'ask'; id: number; question: string }
-  | { type: 'sources'; id: number; sources: Source[] }
+  | { type: 'sources'; id: number; sources: Source[]; backend: string }
   | { type: 'token'; id: number; text: string }
   | { type: 'finish'; id: number; status: Message['status'] }
 
@@ -22,7 +24,7 @@ function reducer(messages: Message[], action: Action): Message[] {
         { id: action.id - 1, role: 'user', text: action.question, sources: [], status: 'done' },
         { id: action.id, role: 'assistant', text: '', sources: [], status: 'streaming' }]
     case 'sources':
-      return messages.map((m) => (m.id === action.id ? { ...m, sources: action.sources } : m))
+      return messages.map((m) => (m.id === action.id ? { ...m, sources: action.sources, backend: action.backend } : m))
     case 'token':
       return messages.map((m) => (m.id === action.id ? { ...m, text: m.text + action.text } : m))
     case 'finish':
@@ -56,11 +58,13 @@ export function useChatStream(k: number) {
         signal: ctrl.signal,
       })
       if (!res.ok || !res.body) throw new Error(`chat failed: ${res.status}`)
+      let status: Message['status'] = 'done'
       for await (const event of readEvents(res.body)) {
-        if (event.type === 'sources') dispatch({ type: 'sources', id, sources: event.items })
+        if (event.type === 'sources') dispatch({ type: 'sources', id, sources: event.items, backend: event.backend })
         else if (event.type === 'token') dispatch({ type: 'token', id, text: event.text })
+        else if (event.type === 'error') status = 'error'  // generation failed after the stream had started
       }
-      dispatch({ type: 'finish', id, status: 'done' })
+      dispatch({ type: 'finish', id, status })
     } catch (e) {
       dispatch({ type: 'finish', id, status: ctrl.signal.aborted ? 'stopped' : 'error' })
       if (!ctrl.signal.aborted) console.error(e)

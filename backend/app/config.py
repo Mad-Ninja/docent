@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     embed_model: str = "BAAI/bge-small-en-v1.5"
     embed_dim: int = 384
     chunk_chars: int = 1200
+    # auto: Anthropic SDK if ANTHROPIC_API_KEY is set, else the local `claude` CLI, else extractive answers
+    llm_backend: str = "auto"
+    llm_model: str = "claude-opus-5-5"
+    llm_effort: str = "medium"
+    claude_code_model: str = "sonnet"
 
 
 settings = Settings()
