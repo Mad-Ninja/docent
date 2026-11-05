@@ -1,7 +1,9 @@
 """Retrieval evaluation on the golden set: does search put the right page near the top?
 
-    python -m app.evals                 vector search, k=6
-    python -m app.evals --per-page 3    same, but at most 3 chunks from one page (diversity)
+    python -m app.evals                      vector search, k=6
+    python -m app.evals --search hybrid      vector + full-text (RRF); `text` = full-text only
+    python -m app.evals --kind keyword       only questions with exact code names
+    python -m app.evals --per-page 2         at most 2 chunks from one page (diversity)
 
 Metrics (questions with an expected page only; out-of-scope ones are for the agent eval):
 - hit@k: share of questions where any expected page is among the top k chunks;
@@ -13,7 +15,9 @@ import json
 import time
 from pathlib import Path
 
-from .search import Hit, vector_search
+from .search import Hit, hybrid_search, text_search, vector_search
+
+SEARCHES = {"vector": vector_search, "text": text_search, "hybrid": hybrid_search}
 
 GOLDEN = Path(__file__).resolve().parents[2] / "evals" / "golden.jsonl"
 
@@ -26,8 +30,10 @@ def first_rank(hits: list[Hit], expected: list[str]) -> int | None:
     return next((i for i, h in enumerate(hits, start=1) if h.path in expected), None)
 
 
-def evaluate(search, k: int) -> dict:
-    cases = [c for c in load_golden() if c["expected"]]
+def evaluate(search, k: int, kind: str | None = None) -> dict:
+    """`kind`: "keyword" = questions with exact code names, "natural" = the rest, None = all."""
+    cases = [c for c in load_golden() if c["expected"]
+             and (kind is None or c.get("kind", "natural") == kind)]
     ranks, pages, misses = [], [], []
     started = time.perf_counter()
     for c in cases:
@@ -47,11 +53,11 @@ def evaluate(search, k: int) -> dict:
             "misses": misses}
 
 
-def diversified(per_page: int):
+def diversified(base, per_page: int):
     """Over-fetch, then keep at most `per_page` chunks of each page, preserving order."""
     def search(q: str, k: int) -> list[Hit]:
         out, seen = [], {}
-        for h in vector_search(q, k * 4):
+        for h in base(q, k * 4):
             if seen.get(h.path, 0) < per_page:
                 seen[h.path] = seen.get(h.path, 0) + 1
                 out.append(h)
@@ -65,6 +71,9 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("-k", type=int, default=6)
     ap.add_argument("--per-page", type=int, default=0)
+    ap.add_argument("--search", choices=SEARCHES, default="vector")
+    ap.add_argument("--kind", choices=["natural", "keyword"], default=None)
     args = ap.parse_args()
-    search = diversified(args.per_page) if args.per_page else vector_search
-    print(json.dumps(evaluate(search, args.k), indent=2, ensure_ascii=False))
+    base = SEARCHES[args.search]
+    search = diversified(base, args.per_page) if args.per_page else base
+    print(json.dumps(evaluate(search, args.k, args.kind), indent=2, ensure_ascii=False))

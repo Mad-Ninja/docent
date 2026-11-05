@@ -33,3 +33,9 @@
 {"id": "oos-person", "question": "I want to talk to a real person, not a bot", "expected": [], "handoff": true}
 {"id": "oos-account", "question": "Please delete my account and all my data", "expected": [], "handoff": true}
 {"id": "oos-weather", "question": "What will the weather be in Minsk tomorrow?", "expected": [], "handoff": true}
+{"id": "kw-encoder", "kind": "keyword", "question": "what does jsonable_encoder do", "expected": ["tutorial/encoder.md"]}
+{"id": "kw-form", "kind": "keyword", "question": "OAuth2PasswordRequestForm example", "expected": ["tutorial/security/simple-oauth2.md"]}
+{"id": "kw-trusted", "kind": "keyword", "question": "TrustedHostMiddleware", "expected": ["advanced/middleware.md"]}
+{"id": "kw-gzip", "kind": "keyword", "question": "GZipMiddleware minimum_size", "expected": ["advanced/middleware.md"]}
+{"id": "kw-root-path", "kind": "keyword", "question": "root_path setting", "expected": ["advanced/behind-a-proxy.md"]}
+{"id": "kw-exclude-unset", "kind": "keyword", "question": "response_model_exclude_unset", "expected": ["tutorial/response-model.md"]}
