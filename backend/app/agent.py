@@ -242,16 +242,28 @@ class PromptedPlanner:
         if observation is not None:
             self.transcript.append(f"Result{' (error)' if is_error else ''}:\n{observation}")
         system = AGENT_PROMPT.format(max_steps=MAX_STEPS) + "\n\n" + self.FORMAT
-        raw = self.complete(system, "\n\n".join(self.transcript))
-        self.transcript.append(f"You: {raw.strip()}")
-        return parse_decision(raw)
+        decision = parse_decision(self.complete(system, "\n\n".join(self.transcript)))
+        # store the parsed call, not the raw reply: the reply may carry an invented tool result
+        self.transcript.append(f"You: {_as_json(decision)}")
+        return decision
+
+
+def _as_json(decision: Decision) -> str:
+    if isinstance(decision, Finish):
+        return '{"done": true}'
+    return json.dumps({"tool": decision.name, "input": decision.input}, ensure_ascii=False)
 
 
 def parse_decision(raw: str) -> Decision:
-    """The first JSON object in the reply. Garbage becomes a call to an unknown tool, so the loop reports it back."""
-    match = re.search(r"\{.*\}", raw, re.S)
+    """The first JSON object in the reply; anything after it is ignored.
+
+    A text-only model sometimes keeps going after its tool call and writes the tool's
+    "Result:" itself. That text is invented, so it must never reach the transcript or the parser.
+    Garbage becomes a call to an unknown tool, so the loop reports it back to the model.
+    """
+    start = raw.find("{")
     try:
-        data = json.loads(match.group(0)) if match else None
+        data, _ = json.JSONDecoder().raw_decode(raw[start:]) if start >= 0 else (None, 0)
     except json.JSONDecodeError:
         data = None
     if not isinstance(data, dict):

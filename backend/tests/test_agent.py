@@ -82,3 +82,18 @@ def test_prompted_planner_feeds_results_into_the_transcript():
     steps, outcome = run(planner)
     assert outcome.kind == "answer" and len(steps) == 1
     assert "tutorial/cors.md" in prompts[1] and "Question: How to enable CORS?" in prompts[1]
+
+
+def test_invented_tool_result_after_the_call_is_dropped():
+    # seen in the eval run: the model wrote its own "Result:" (with braces) after the call
+    reply = ('{"tool": "read_document", "input": {"path": "tutorial/testing.md"}}\n\n'
+             'Result: # Testing\nclient.get("/items/{item_id}")')
+    assert parse_decision(reply) == ToolCall("read_document", {"path": "tutorial/testing.md"})
+
+    prompts = []
+    replies = iter([reply, '{"done": true}'])
+    planner = PromptedPlanner(complete=lambda system, prompt: prompts.append(prompt) or next(replies))
+    planner.start("how to test?")
+    planner.decide(None)
+    planner.decide("[1] real page text")
+    assert "Result: # Testing" not in prompts[1] and "real page text" in prompts[1]

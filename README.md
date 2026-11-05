@@ -17,7 +17,7 @@ The knowledge base is the [FastAPI documentation](https://github.com/fastapi/fas
 | Hybrid search (pgvector + full-text, RRF) — built and measured; not used, vector search scored higher | ✅ |
 | Answers with citations (Claude), refusal when the docs don't cover it | ✅ |
 | Agent with tools: search, read page, hand-off to a human; step budget, error recovery, traces | ✅ |
-| Evaluation: golden set + retrieval metrics (hit@k, MRR) ✅; LLM-as-judge, agent metrics ⏳ | 🟡 |
+| Evaluation: golden set + retrieval metrics (hit@k, MRR) ✅; agent vs plain RAG (evidence, hand-offs, steps, latency) ✅; LLM-as-judge for answers ⏳ | 🟡 |
 
 ## Run
 
@@ -69,8 +69,20 @@ Golden set: `evals/golden.jsonl` — 30 questions phrased the way users ask (not
 
 Full-text matching on everyday wording pulls in pages that share common words (often the release notes), and fusion carries that noise into the top 6. Down-weighting full-text recovers MRR on natural questions but loses a keyword question — and a weight tuned on 30 questions would be tuned to this set, so I did not ship it.
 
+**Agent vs plain RAG** (`python -m app.agent_evals --planner …`, 2026-11-05, 36 documented + 5 out-of-scope questions; per-question results in `evals/runs/`):
+
+| | Evidence has the right page | Hand-off precision / recall | Avg tool calls | p50 / p90 latency |
+|---|---|---|---|---|
+| Plain RAG (one search with the question) | 0.944 | — / 0.0 | 1.0 | 0.07 s / 0.13 s |
+| **Agent** (Claude Sonnet via `claude -p`) | **0.972** | **1.0 / 1.0** | 1.37 | 14 s / 36 s |
+
+- The agent fixes the CORS miss by rewriting the query ("CORS cross origin localhost React…"), and it hands off all 5 out-of-scope questions (refund, Django, "a real person", account deletion, weather) without touching a documented one. Plain RAG cannot hand off at all — it would answer the refund question from whatever it found.
+- The price is latency: ~200× slower, most of it the CLI starting a process per step. The API planner with prompt caching is the next thing to measure.
+- Remaining miss: "apply an API key check to every route" — the agent searched three times and found a page that only *links* to global dependencies.
+- **A bug the eval caught:** in the first run 6 of 41 questions had a broken step. The text-only model wrote its tool call and then kept going, inventing the tool's "Result:" itself; the parser took everything up to the last brace and failed. Now only the first JSON object is parsed and the transcript stores the parsed call, never the raw reply, so an invented result cannot become evidence (regression test in `tests/test_agent.py`).
+
 What the misses show:
 - *"My React app on localhost:3000 gets blocked…"* never says "CORS", and pure vector search does not find the CORS page. The agent rewrites the query to "CORS…" and finds it — the case the agent exists for (the agent eval will measure it).
 - The release notes mention every feature and crowd real pages out of the results.
 - Hybrid search does not fix the CORS miss either: the question shares no words with the page.
-- Next: the agent eval — tool choice, hand-off accuracy, steps, latency — against the plain-RAG baseline.
+- Next: LLM-as-judge for the answers themselves (correct, grounded, cited) — tool choice, hand-off accuracy, steps, latency — against the plain-RAG baseline.
