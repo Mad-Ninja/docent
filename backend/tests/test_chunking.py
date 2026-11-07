@@ -49,3 +49,16 @@ def test_chunk_document_titles_and_order():
     assert chunks[0].title == "First Steps"
     assert chunks[-1].heading == "First Steps › Run it › Check"
     assert [c.ord for c in chunks] == list(range(len(chunks)))
+
+
+def test_code_includes_are_inlined_with_line_ranges(tmp_path):
+    from app.chunking import code_include
+    src = tmp_path / "docs_src" / "static"
+    src.mkdir(parents=True)
+    (src / "t1.py").write_text("from fastapi import FastAPI\n\napp = FastAPI()\nx = 1\napp.mount('/static')\n")
+    md = "# Static\n\nMount it:\n\n{* ../../docs_src/static/t1.py ln[1:3,5] hl[2] *}\n\n{* ../../docs_src/missing.py *}\n"
+    text = clean(md, code_include(tmp_path))
+    assert "```py\nfrom fastapi import FastAPI\napp = FastAPI()\napp.mount('/static')\n```" in text
+    assert "x = 1" not in text and "missing" not in text and "{*" not in text
+    # without a resolver the directive is dropped, as before
+    assert "{*" not in clean(md)

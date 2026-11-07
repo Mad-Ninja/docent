@@ -6,7 +6,7 @@ import time
 
 import numpy as np
 
-from .chunking import chunk_document
+from .chunking import chunk_document, code_include
 from .config import settings
 from .db import connect, init_schema
 from .embeddings import embed_passages
@@ -18,10 +18,11 @@ def run() -> None:
     init_schema(conn)
     conn.execute("TRUNCATE documents, chunks RESTART IDENTITY CASCADE")
     files = sorted(settings.corpus_dir.rglob("*.md"))
+    include = code_include(settings.corpus_dir.parent / "fastapi_src")
     total = 0
     for f in files:
         rel = f.relative_to(settings.corpus_dir).as_posix()
-        chunks = chunk_document(rel, f.read_text(encoding="utf-8"), settings.chunk_chars)
+        chunks = chunk_document(rel, f.read_text(encoding="utf-8"), settings.chunk_chars, include)
         if not chunks:
             continue
         # The heading goes into the embedded text: "Security › OAuth2" says a lot about the paragraph below it.

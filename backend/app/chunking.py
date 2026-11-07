@@ -1,10 +1,14 @@
 """Markdown → chunks. Each chunk keeps its heading path, so a hit can be cited as "Page › Section"."""
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 HEADING_RE = re.compile(r"^(#{1,4})\s+(.+?)\s*$")
 ANCHOR_RE = re.compile(r"\s*\{\s*#[\w-]+\s*\}\s*$")  # "# First Steps { #first-steps }"
-INCLUDE_RE = re.compile(r"^\s*\{\*.*\*\}\s*$")  # "{* ../../docs_src/x.py *}": code lives outside the docs
+INCLUDE_RE = re.compile(r"^\s*\{\*\s*(\S+)(.*?)\*\}\s*$")  # "{* ../../docs_src/x.py hl[2,6] *}": code lives outside the docs
+LINES_RE = re.compile(r"ln\[([\d:,]+)\]")
+MAX_CODE_CHARS = 2000  # a longer example would crowd out the prose around it
 ADMONITION_RE = re.compile(r"^///\s*(\w+)?.*$")  # "/// tip" ... "///"
 TAG_RE = re.compile(r"<[^>]+>")
 
@@ -18,11 +22,43 @@ class Chunk:
     text: str
 
 
-def clean(markdown: str) -> str:
-    """Drop what carries no meaning for search: HTML, include directives, admonition fences, heading anchors."""
+Include = Callable[[str, str], str | None]  # (path from the directive, its options) -> code, or None
+
+
+def code_include(src_root: Path) -> Include:
+    """Resolve "{* ../../docs_src/a/b.py ln[1:11] *}" to the file under src_root, keeping only the listed lines.
+
+    Without this every code example of the docs is missing from the index, and the model writes code
+    from memory — the answer judge flagged exactly that (an `app.mount(...)` line no source contained).
+    """
+    def resolve(ref: str, options: str) -> str | None:
+        rel = ref.split("docs_src/", 1)[-1]
+        f = src_root / "docs_src" / rel
+        if "docs_src/" not in ref or not f.is_file():
+            return None
+        lines = f.read_text(encoding="utf-8").splitlines()
+        m = LINES_RE.search(options)
+        if m:
+            keep: list[str] = []
+            for part in m.group(1).split(","):
+                a, _, b = part.partition(":")
+                keep += lines[int(a) - 1:int(b or a)]
+            lines = keep
+        # no blank lines: the example stays one paragraph, so packing never splits it
+        code = "\n".join(l for l in lines if l.strip())[:MAX_CODE_CHARS]
+        return f"```{f.suffix.lstrip('.') or 'text'}\n{code}\n```"
+    return resolve
+
+
+def clean(markdown: str, include: Include | None = None) -> str:
+    """Drop what carries no meaning for search: HTML, admonition fences, heading anchors; inline code includes."""
     out = []
     for line in markdown.splitlines():
-        if INCLUDE_RE.match(line):
+        m = INCLUDE_RE.match(line)
+        if m:
+            code = include(m.group(1), m.group(2)) if include else None
+            if code:
+                out += ["", code, ""]
             continue
         m = ADMONITION_RE.match(line)
         if m:
@@ -61,7 +97,7 @@ def pack(body: str, limit: int) -> list[str]:
     """Greedy packing of paragraphs up to `limit` chars; a single long paragraph is cut on sentence ends."""
     parts, cur = [], ""
     for para in re.split(r"\n\s*\n", body):
-        pieces = [para] if len(para) <= limit else re.split(r"(?<=[.!?])\s+", para)
+        pieces = [para] if len(para) <= limit or para.startswith("```") else re.split(r"(?<=[.!?])\s+", para)
         for p in pieces:
             if cur and len(cur) + len(p) + 2 > limit:
                 parts.append(cur)
@@ -72,8 +108,8 @@ def pack(body: str, limit: int) -> list[str]:
     return parts
 
 
-def chunk_document(path: str, markdown: str, limit: int = 1200) -> list[Chunk]:
-    text = clean(markdown)
+def chunk_document(path: str, markdown: str, limit: int = 1200, include: Include | None = None) -> list[Chunk]:
+    text = clean(markdown, include)
     secs = sections(text)
     title = next((p[0] for p, _ in secs if p), path)
     chunks = []
